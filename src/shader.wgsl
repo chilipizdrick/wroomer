@@ -50,11 +50,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let texel_color = textureSample(image_texture, image_sampler, in.tex_coord);
 
     let proportionality_transform = mat2x2<f32>(
-        uniforms.canvas_size.x / uniforms.canvas_size.y, 0.0,
+        uniforms.image_size.x / uniforms.image_size.y, 0.0,
         0.0, 1.0
     );
 
-    let local_cursor_position = (uniforms.cursor_position - uniforms.image_offset) / uniforms.canvas_size / uniforms.zoom_factor;
+    let local_cursor_position = (uniforms.cursor_position - uniforms.image_offset) / uniforms.image_size / uniforms.zoom_factor;
 
     let actual_distance_to_cursor = distance(proportionality_transform * local_cursor_position, proportionality_transform * in.tex_coord);
 
