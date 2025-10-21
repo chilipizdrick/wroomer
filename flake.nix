@@ -19,8 +19,8 @@
             pkg-config
             wayland
             vulkan-loader
-            libgbm
             libxkbcommon
+            libgbm
             libGL
           ];
           LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath buildInputs}";
