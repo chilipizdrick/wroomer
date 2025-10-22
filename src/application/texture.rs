@@ -1,32 +1,20 @@
 use image::GenericImageView;
 
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-
 #[derive(Debug)]
-pub struct Texture {
-    #[allow(unused)]
-    pub texture: wgpu::Texture,
+pub struct DiffuseImageTexture {
+    // Texture needs to exist in order for us to use texture view
+    _texture: wgpu::Texture,
     pub view: wgpu::TextureView,
     pub sampler: wgpu::Sampler,
 }
 
-impl Texture {
-    // pub fn from_bytes(
-    //     device: &wgpu::Device,
-    //     queue: &wgpu::Queue,
-    //     bytes: &[u8],
-    //     label: &str,
-    // ) -> Result<Self> {
-    //     let img = image::load_from_memory(bytes)?;
-    //     Self::from_image(device, queue, &img, Some(label))
-    // }
-
+impl DiffuseImageTexture {
     pub fn from_image(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         img: &image::DynamicImage,
         label: Option<&str>,
-    ) -> Result<Self> {
+    ) -> Self {
         let rgba = img.to_rgba8();
         let dimensions = img.dimensions();
 
@@ -73,10 +61,10 @@ impl Texture {
             ..Default::default()
         });
 
-        Ok(Self {
-            texture,
+        Self {
+            _texture: texture,
             view,
             sampler,
-        })
+        }
     }
 }

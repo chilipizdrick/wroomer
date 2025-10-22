@@ -1,6 +1,6 @@
-use crate::vector::Vec2f32;
+use crate::application::vec2d::Vec2f32;
 
-// This struct is regularly sent to the GPU
+// Gpu uniforms buffer
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::NoUninit)]
 pub struct Uniforms {
@@ -15,16 +15,11 @@ pub struct Uniforms {
 }
 
 impl Uniforms {
-    pub fn new(canvas_size: Vec2f32, image_size: Vec2f32) -> Self {
+    pub fn with_canvas_and_image_size(canvas_size: Vec2f32, image_size: Vec2f32) -> Self {
         Self {
             canvas_size,
             image_size,
-            image_offset: (0.0, 0.0).into(),
-            cursor_position: (0.0, 0.0).into(),
-            spotlight_color: [0.0, 0.0, 0.0, 0.0],
-            zoom_factor: 1.0,
-            spotlight_radius_multiplier: 1.0,
-            _padding: [0; 12],
+            ..Default::default()
         }
     }
 
@@ -49,6 +44,21 @@ impl Uniforms {
                 },
                 count: None,
             }],
+        }
+    }
+}
+
+impl Default for Uniforms {
+    fn default() -> Self {
+        Self {
+            canvas_size: Vec2f32::new(0.0, 0.0),
+            image_size: Vec2f32::new(0.0, 0.0),
+            image_offset: Vec2f32::new(0.0, 0.0),
+            cursor_position: Vec2f32::new(0.0, 0.0),
+            spotlight_color: [0.0, 0.0, 0.0, 0.0],
+            zoom_factor: 1.0,
+            spotlight_radius_multiplier: 1.0,
+            _padding: [0; 12],
         }
     }
 }
