@@ -31,7 +31,7 @@ pub struct State<'a> {
 
 impl State<'_> {
     pub fn new(window: Window, image: &DynamicImage) -> Self {
-        let rendering_backends = wgpu::Backends::VULKAN;
+        let rendering_backends = wgpu::Backends::PRIMARY;
 
         let window_size = window.inner_size();
 

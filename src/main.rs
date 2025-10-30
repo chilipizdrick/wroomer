@@ -3,10 +3,10 @@ mod cli_args;
 mod screenshot;
 
 use clap::Parser;
-use winit::{
-    event_loop::{ControlFlow, EventLoop},
-    platform::wayland::EventLoopBuilderExtWayland,
-};
+use winit::event_loop::{ControlFlow, EventLoop};
+
+#[cfg(feature = "wayland")]
+use winit::platform::wayland::EventLoopBuilderExtWayland;
 
 use crate::{application::App, cli_args::Args, screenshot::get_screenshot_all_screens};
 
@@ -15,7 +15,12 @@ fn main() -> anyhow::Result<()> {
 
     tracing_subscriber::fmt().init();
 
+    #[cfg(feature = "wayland")]
     let event_loop = EventLoop::builder().with_wayland().build()?;
+
+    #[cfg(not(feature = "wayland"))]
+    let event_loop = EventLoop::builder().build()?;
+
     event_loop.set_control_flow(ControlFlow::Wait);
 
     let image = match args.image_path {

@@ -18,4 +18,4 @@ If you find this repository useful or inspiring, good for you, I guess.
 
 ## Planned features
 
-If I have time and motivation, I will implement smooth scrolling and zooming and make application cross-platform.
+If I have time and motivation, I will implement smooth scrolling and zooming and ~make application cross-platform~ it should be cross-platform.

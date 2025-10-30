@@ -7,6 +7,11 @@
   vulkan-loader,
   libgbm,
   libGL,
+  pipewire,
+  libclang,
+  stdenv,
+  libxcb,
+  waylandSupport ? false,
 }:
 rustPlatform.buildRustPackage rec {
   pname = "wroomer";
@@ -21,28 +26,52 @@ rustPlatform.buildRustPackage rec {
 
   src = lib.cleanSource ./.;
 
+  cargoBuildFlags = lib.optionals waylandSupport [
+    "--features"
+    "wayland"
+  ];
+
   nativeBuildInputs = [
     pkg-config
   ];
 
-  buildInputs = [
-    wayland
-    libxkbcommon
-    vulkan-loader
-    libgbm
-    libGL
-  ];
+  buildInputs =
+    [
+      wayland
+      libxkbcommon
+      vulkan-loader
+      libgbm
+      pipewire
+      libclang
+      libxcb
+    ]
+    ++ (lib.optionals waylandSupport [libGL]);
+
+  LD_LIBRARY_PATH = "${lib.makeLibraryPath buildInputs}";
+
+  preBuild = ''
+      export BINDGEN_EXTRA_CLANG_ARGS="$(< ${stdenv.cc}/nix-support/libc-crt1-cflags) \
+      $(< ${stdenv.cc}/nix-support/libc-cflags) \
+      $(< ${stdenv.cc}/nix-support/cc-cflags) \
+      $(< ${stdenv.cc}/nix-support/libcxx-cxxflags) \
+      ${lib.optionalString stdenv.cc.isClang "-idirafter ${stdenv.cc.cc}/lib/clang/${lib.getVersion stdenv.cc.cc}/include"} \
+      ${lib.optionalString stdenv.cc.isGNU "-isystem ${stdenv.cc.cc}/include/c++/${lib.getVersion stdenv.cc.cc} -isystem ${stdenv.cc.cc}/include/c++/${lib.getVersion stdenv.cc.cc}/${stdenv.hostPlatform.config} -idirafter ${stdenv.cc.cc}/lib/gcc/${stdenv.hostPlatform.config}/${lib.getVersion stdenv.cc.cc}/include"} \
+    "
+
+  '';
 
   postFixup = let
-    rpathWayland = lib.makeLibraryPath [
-      wayland
-      vulkan-loader
-      libxkbcommon
-      libgbm
-      libGL
-    ];
+    rpath = lib.makeLibraryPath ([
+        wayland
+        vulkan-loader
+        libxkbcommon
+        libgbm
+        pipewire
+        libxcb
+      ]
+      ++ (lib.optionals waylandSupport [libGL]));
   in ''
     rpath=$(patchelf --print-rpath $out/bin/wroomer)
-    patchelf --set-rpath "$rpath:${rpathWayland}" $out/bin/wroomer
+    patchelf --set-rpath "$rpath:${rpath}" $out/bin/wroomer
   '';
 }
