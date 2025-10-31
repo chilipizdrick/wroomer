@@ -65,6 +65,8 @@ impl State<'_> {
             .copied()
             .unwrap_or(surface_capabilities.formats[0]);
 
+        let alpha_mode = select_alpha_mode_prefer_transparency(&surface_capabilities);
+
         let surface_config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: texture_format,
@@ -72,7 +74,7 @@ impl State<'_> {
             width: window_size.width,
             present_mode: wgpu::PresentMode::AutoVsync,
             desired_maximum_frame_latency: 2,
-            alpha_mode: wgpu::CompositeAlphaMode::PreMultiplied,
+            alpha_mode,
             view_formats: vec![],
         };
 
@@ -453,5 +455,18 @@ fn color_from_rgba(rgba: &[f32; 4]) -> wgpu::Color {
         g: rgba[1] as f64,
         b: rgba[2] as f64,
         a: rgba[3] as f64,
+    }
+}
+
+fn select_alpha_mode_prefer_transparency(
+    capabilities: &wgpu::SurfaceCapabilities,
+) -> wgpu::CompositeAlphaMode {
+    use wgpu::CompositeAlphaMode::*;
+
+    let alpha_modes = &capabilities.alpha_modes;
+    match () {
+        _ if alpha_modes.contains(&PreMultiplied) => PreMultiplied,
+        _ if alpha_modes.contains(&PostMultiplied) => PostMultiplied,
+        _ => Auto,
     }
 }

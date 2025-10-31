@@ -31,7 +31,8 @@ impl ApplicationHandler for App {
             let window_attributes = Window::default_attributes()
                 .with_title("Wroomer")
                 .with_fullscreen(Some(Fullscreen::Borderless(None)))
-                .with_transparent(true);
+                .with_transparent(true)
+                .with_blur(true);
 
             let window = event_loop.create_window(window_attributes).unwrap();
 

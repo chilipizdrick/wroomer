@@ -15,8 +15,11 @@
           wroomer-wayland = pkgs.callPackage ./package.nix {waylandSupport = true;};
           default = wroomer;
         };
+
         devShells.default = pkgs.mkShell rec {
           buildInputs = with pkgs; [
+            cargo-xwin
+
             pkg-config
             wayland
             vulkan-loader
@@ -27,6 +30,13 @@
             pipewire
             libclang
             libxcb
+
+            pkgsCross.mingwW64.stdenv.cc
+            # windows.pthreads
+
+            (pkgsCross.mingwW64.windows.mcfgthreads.overrideAttrs {
+              dontDisableStatic = true;
+            })
           ];
 
           shellHook = let

@@ -10,8 +10,6 @@ mod platform_specific {
     pub fn get_screenshot_all_screens() -> ScreenshotResult {
         let monitors = Monitor::all()?;
 
-        dbg!(&monitors);
-
         let screenshots = monitors
             .iter()
             .map(|m| m.capture_image())

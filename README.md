@@ -1,4 +1,4 @@
-# wroomer - a simple zoomer application for wayland
+# wroomer - a simple zoomer application ~for wayland~ (now works everywhere)
 
 This application is obviously inspired by [boomer](https://github.com/tsoding/boomer) by [tsoding](https://github.com/tsoding) and [woomer](https://github.com/coffeeispower/woomer) by [Tiago Dinis](https://github.com/coffeeispower) (which actually works on wayland).
 

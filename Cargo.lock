@@ -4692,7 +4692,6 @@ dependencies = [
  "libwayshot",
  "log",
  "pollster",
- "thiserror 2.0.17",
  "tracing-subscriber",
  "wgpu",
  "winit",
