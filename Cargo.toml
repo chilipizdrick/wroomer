@@ -20,8 +20,3 @@ libwayshot = { git = "https://github.com/waycrate/wayshot", rev = "7d38071", opt
 [features]
 wayland = ["dep:libwayshot"]
 
-# [features]
-# wayland = ["dep:libwayshot"]
-# not_wayland = ["dep:xcap"]
-#
-# default = ["not_wayland"]

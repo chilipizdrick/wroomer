@@ -35,17 +35,16 @@ rustPlatform.buildRustPackage rec {
     pkg-config
   ];
 
-  buildInputs =
-    [
-      wayland
-      libxkbcommon
-      vulkan-loader
-      libgbm
-      pipewire
-      libclang
-      libxcb
-    ]
-    ++ (lib.optionals waylandSupport [libGL]);
+  buildInputs = [
+    wayland
+    libxkbcommon
+    vulkan-loader
+    libgbm
+    pipewire
+    libclang
+    libxcb
+    libGL
+  ];
 
   LD_LIBRARY_PATH = "${lib.makeLibraryPath buildInputs}";
 
@@ -60,15 +59,15 @@ rustPlatform.buildRustPackage rec {
   '';
 
   postFixup = let
-    rpath = lib.makeLibraryPath ([
-        wayland
-        vulkan-loader
-        libxkbcommon
-        libgbm
-        pipewire
-        libxcb
-      ]
-      ++ (lib.optionals waylandSupport [libGL]));
+    rpath = lib.makeLibraryPath [
+      wayland
+      vulkan-loader
+      libxkbcommon
+      libgbm
+      pipewire
+      libxcb
+      libGL
+    ];
   in ''
     rpath=$(patchelf --print-rpath $out/bin/wroomer)
     patchelf --set-rpath "$rpath:${rpath}" $out/bin/wroomer
