@@ -222,7 +222,7 @@ impl State<'_> {
                     depth_slice: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(color_from_rgba(&self.uniforms.spotlight_color)),
-                        store: wgpu::StoreOp::Discard,
+                        store: wgpu::StoreOp::Store,
                     },
                 })],
                 ..Default::default()
