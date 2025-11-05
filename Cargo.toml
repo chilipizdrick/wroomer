@@ -20,3 +20,9 @@ libwayshot = { git = "https://github.com/waycrate/wayshot", rev = "7d38071", opt
 [features]
 wayland = ["dep:libwayshot"]
 
+[profile.profiling]
+inherits = "release"
+opt-level = 3
+debug = 2
+debug-assertions = false
+overflow-checks = true

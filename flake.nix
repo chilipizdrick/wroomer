@@ -19,6 +19,9 @@
         devShells.default = pkgs.mkShell rec {
           buildInputs = with pkgs; [
             cargo-xwin
+            cargo-flamegraph
+            perf
+            binutils
 
             pkg-config
             wayland
