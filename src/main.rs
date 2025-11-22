@@ -25,13 +25,7 @@ fn main() -> anyhow::Result<()> {
     #[cfg(not(feature = "wayland"))]
     let window_event_loop = EventLoop::new()?;
 
-    let controll_flow = if args.dvd_logo {
-        ControlFlow::Poll
-    } else {
-        ControlFlow::Wait
-    };
-
-    window_event_loop.set_control_flow(controll_flow);
+    window_event_loop.set_control_flow(ControlFlow::Wait);
 
     let image = match args.image_path {
         Some(path) => image::open(path)?,
