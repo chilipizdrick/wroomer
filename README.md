@@ -8,7 +8,8 @@ This application is obviously inspired by [boomer](https://github.com/tsoding/bo
 - Right mouse button, <kbd>Esc</kbd> or <kbd>Q</kbd> - Quit application
 - Left mouse button - Drag to move image
 - Scroll wheel - Zoom image in/out
-- <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + Scroll wheel - Adjust spotlight radius 
+- <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + Scroll wheel - Adjust spotlight radius
+- <kbd>D</kbd> - Spawn a DVD logo (only works with `--dvd-logo` cli flag)
 
 ## Why?
 

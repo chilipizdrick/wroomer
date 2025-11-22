@@ -2,16 +2,20 @@ use crate::application::vec2d::Vec2f32;
 
 // Gpu uniforms buffer
 #[repr(C)]
-#[derive(Debug, Clone, Copy, bytemuck::NoUninit)]
+#[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Uniforms {
+    pub spotlight_color: [f32; 4],
+    pub dvd_logo_color: [f32; 4],
     pub canvas_size: Vec2f32,
     pub image_size: Vec2f32,
     pub image_offset: Vec2f32,
     pub cursor_position: Vec2f32,
-    pub spotlight_color: [f32; 4],
+    pub dvd_logo_position: Vec2f32,
+    pub dvd_logo_size: Vec2f32,
     pub zoom_factor: f32,
     pub spotlight_radius_multiplier: f32,
-    _padding: [u8; 12],
+    pub dvd_logo_visible: u32,
+    _padding: [u8; 4],
 }
 
 impl Uniforms {
@@ -51,14 +55,18 @@ impl Uniforms {
 impl Default for Uniforms {
     fn default() -> Self {
         Self {
+            spotlight_color: [0.0, 0.0, 0.0, 0.0],
+            dvd_logo_color: [1.0, 0.0, 0.0, 0.5],
             canvas_size: Vec2f32::new(0.0, 0.0),
             image_size: Vec2f32::new(0.0, 0.0),
             image_offset: Vec2f32::new(0.0, 0.0),
             cursor_position: Vec2f32::new(0.0, 0.0),
-            spotlight_color: [0.0, 0.0, 0.0, 0.0],
+            dvd_logo_position: Vec2f32::new(0.0, 0.0),
+            dvd_logo_size: Vec2f32::new(0.0, 0.0),
             zoom_factor: 1.0,
             spotlight_radius_multiplier: 1.0,
-            _padding: [0; 12],
+            dvd_logo_visible: 0,
+            _padding: [0u8; 4],
         }
     }
 }

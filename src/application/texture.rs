@@ -15,6 +15,7 @@ impl DiffuseImageTexture {
         img: &image::DynamicImage,
         label: Option<&str>,
     ) -> Self {
+        // TODO: Remove cloning here
         let rgba = img.to_rgba8();
         let dimensions = img.dimensions();
 

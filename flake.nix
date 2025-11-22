@@ -33,13 +33,6 @@
             pipewire
             libclang
             libxcb
-
-            pkgsCross.mingwW64.stdenv.cc
-            # windows.pthreads
-
-            (pkgsCross.mingwW64.windows.mcfgthreads.overrideAttrs {
-              dontDisableStatic = true;
-            })
           ];
 
           shellHook = let

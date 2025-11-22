@@ -58,7 +58,23 @@ const UNIT_RADIUS: f32 = 0.1;
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     var texel_color = textureSample(image_texture, image_sampler, in.tex_coord);
 
-    let proportionality_transform = mat2x2<f32>(
+    if uniforms.dvd_logo_visible != 0 && coordInDvdRectangle(in.tex_coord * uniforms.image_size) {
+        let dvd_logo_position =
+            (in.tex_coord - uniforms.dvd_logo_position / uniforms.image_size)
+            / uniforms.dvd_logo_size
+            * uniforms.image_size;
+
+        let dvd_texel_color = textureSample(dvd_logo_texture, dvd_logo_sampler, dvd_logo_position);
+
+        let dvd_color = uniforms.dvd_logo_color * dvd_texel_color.a;
+
+        texel_color = vec4f(
+            dvd_color.rgb + texel_color.rgb * (1.0 - dvd_color.a),
+            texel_color.a + dvd_color.a * (1.0 - texel_color.a)
+        );
+    }
+
+    let image_transform = mat2x2<f32>(
         uniforms.image_size.x / uniforms.image_size.y, 0.0,
         0.0, 1.0
     );
@@ -69,8 +85,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         / uniforms.zoom_factor;
 
     let actual_distance_to_cursor = distance(
-        proportionality_transform * local_cursor_position,
-        proportionality_transform * in.tex_coord
+        image_transform * local_cursor_position,
+        image_transform * in.tex_coord
     );
 
     let radius = UNIT_RADIUS * uniforms.spotlight_radius_multiplier / uniforms.zoom_factor;
@@ -88,4 +104,11 @@ fn ndcToUv(ndc: vec2<f32>) -> vec2<f32> {
 
 fn uvToNdc(uv: vec2<f32>) -> vec2<f32> {
     return vec2<f32>(uv.x, -uv.y) * 2.0 - vec2<f32>(1.0, -1.0);
+}
+
+fn coordInDvdRectangle(coord: vec2<f32>) -> bool {
+    return (coord.x > uniforms.dvd_logo_position.x)
+        && (coord.x < uniforms.dvd_logo_position.x + uniforms.dvd_logo_size.x)
+        && (coord.y > uniforms.dvd_logo_position.y)
+        && (coord.y < uniforms.dvd_logo_position.y + uniforms.dvd_logo_size.y);
 }

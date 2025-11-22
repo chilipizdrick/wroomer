@@ -11,17 +11,22 @@ use winit::{
     window::{Fullscreen, Window, WindowId},
 };
 
-use crate::application::state::State;
+use crate::{application::state::State, config::AppConfig};
 
 #[derive(Debug, Default)]
 pub struct App {
     state: Option<State<'static>>,
     image: DynamicImage,
+    config: AppConfig,
 }
 
 impl App {
-    pub fn new(image: DynamicImage) -> Self {
-        Self { state: None, image }
+    pub fn new(image: DynamicImage, config: AppConfig) -> Self {
+        Self {
+            state: None,
+            image,
+            config,
+        }
     }
 }
 
@@ -36,7 +41,7 @@ impl ApplicationHandler for App {
 
             let window = event_loop.create_window(window_attributes).unwrap();
 
-            self.state = Some(State::new(window, &self.image));
+            self.state = Some(State::new(window, &self.image, self.config));
         }
     }
 
@@ -47,11 +52,6 @@ impl ApplicationHandler for App {
         event: WindowEvent,
     ) {
         if let Some(state) = &mut self.state {
-            let should_request_redraw = !matches!(
-                event,
-                WindowEvent::RedrawRequested | WindowEvent::CloseRequested | WindowEvent::Destroyed
-            );
-
             match event {
                 WindowEvent::CloseRequested | WindowEvent::Destroyed => event_loop.exit(),
                 WindowEvent::Resized(size) => state.handle_resize_event(size),
@@ -74,10 +74,6 @@ impl ApplicationHandler for App {
                 WindowEvent::CursorMoved { position, .. } => state.handle_cursor_moved(position),
                 WindowEvent::RedrawRequested => state.handle_redraw_requested(),
                 _ => {}
-            }
-
-            if should_request_redraw {
-                state.request_window_redraw();
             }
         }
     }

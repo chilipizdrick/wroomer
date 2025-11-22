@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use image::DynamicImage;
-use wgpu::util::DeviceExt;
+use wgpu::{BindGroupLayout, util::DeviceExt};
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
     event::{ElementState, InnerSizeWriter, KeyEvent, Modifiers, MouseButton, MouseScrollDelta},
@@ -10,11 +10,18 @@ use winit::{
     window::Window,
 };
 
-use crate::application::{texture::DiffuseImageTexture, uniforms::Uniforms, vec2d::Vec2f32};
+use crate::{
+    application::{texture::DiffuseImageTexture, uniforms::Uniforms, vec2d::Vec2f32},
+    config::AppConfig,
+};
 
 #[derive(Debug)]
 pub struct State<'a> {
+    config: AppConfig,
     device: wgpu::Device,
+    dvd_logo_speed: Vec2f32,
+    dvd_texture_bind_group: Option<wgpu::BindGroup>,
+    image_texture_bind_group: wgpu::BindGroup,
     initial_draging_position: Option<Vec2f32>,
     old_image_offset: Vec2f32,
     queue: wgpu::Queue,
@@ -22,7 +29,7 @@ pub struct State<'a> {
     scroll_behaviour: ScrollBehaviour,
     surface: wgpu::Surface<'a>,
     surface_config: wgpu::SurfaceConfiguration,
-    texture_bind_group: wgpu::BindGroup,
+    time: u32,
     uniforms: Uniforms,
     uniforms_bind_group: wgpu::BindGroup,
     uniforms_buffer: wgpu::Buffer,
@@ -30,7 +37,7 @@ pub struct State<'a> {
 }
 
 impl State<'_> {
-    pub fn new(window: Window, image: &DynamicImage) -> Self {
+    pub fn new(window: Window, image: &DynamicImage, config: AppConfig) -> Self {
         let rendering_backends = wgpu::Backends::PRIMARY;
 
         let window_size = window.inner_size();
@@ -78,7 +85,7 @@ impl State<'_> {
             view_formats: vec![],
         };
 
-        let uniforms = Uniforms::with_canvas_and_image_size(
+        let mut uniforms = Uniforms::with_canvas_and_image_size(
             (window_size.width as f32, window_size.height as f32).into(),
             (image.width() as f32, image.height() as f32).into(),
         );
@@ -98,7 +105,7 @@ impl State<'_> {
         });
 
         let image_texture =
-            DiffuseImageTexture::from_image(&device, &queue, image, Some("Image texture"));
+            DiffuseImageTexture::from_image(&device, &queue, image, Some("Image Texture"));
 
         let texture_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -123,7 +130,7 @@ impl State<'_> {
                 label: Some("Texture Bind Group Layout"),
             });
 
-        let texture_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let image_texture_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &texture_bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
@@ -138,13 +145,69 @@ impl State<'_> {
             label: Some("Diffuse Bind Group"),
         });
 
-        let shader =
-            device.create_shader_module(wgpu::include_wgsl!("../../assets/shaders/shader.wgsl"));
+        let dvd_texture_bind_group = if config.dvd_logo_enabled {
+            let dvd_logo_image =
+                image::load_from_memory(include_bytes!("../../assets/dvd_logo.png")).unwrap();
+
+            let dvd_logo_image = dvd_logo_image.resize(
+                (uniforms.image_size.x / 5.0) as u32,
+                (uniforms.image_size.y / 5.0) as u32,
+                image::imageops::FilterType::Nearest,
+            );
+
+            uniforms.dvd_logo_size = (
+                dvd_logo_image.width() as f32,
+                dvd_logo_image.height() as f32,
+            )
+                .into();
+
+            let dvd_logo_texture = DiffuseImageTexture::from_image(
+                &device,
+                &queue,
+                &dvd_logo_image,
+                Some("DVD Logo Texture"),
+            );
+
+            let dvd_texture_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                layout: &texture_bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&dvd_logo_texture.view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&dvd_logo_texture.sampler),
+                    },
+                ],
+                label: Some("Diffuse Bind Group"),
+            });
+
+            Some(dvd_texture_bind_group)
+        } else {
+            None
+        };
+
+        let shader_module_desc = match config.dvd_logo_enabled {
+            false => wgpu::include_wgsl!("../../assets/shaders/shader.wgsl"),
+            true => wgpu::include_wgsl!("../../assets/shaders/shader_dvd.wgsl"),
+        };
+
+        let shader = device.create_shader_module(shader_module_desc);
+
+        let bind_group_layouts: &[&BindGroupLayout] = match config.dvd_logo_enabled {
+            false => &[&uniforms_bind_group_layout, &texture_bind_group_layout],
+            true => &[
+                &uniforms_bind_group_layout,
+                &texture_bind_group_layout,
+                &texture_bind_group_layout,
+            ],
+        };
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&uniforms_bind_group_layout, &texture_bind_group_layout],
+                bind_group_layouts,
                 push_constant_ranges: &[],
             });
 
@@ -181,7 +244,11 @@ impl State<'_> {
         });
 
         Self {
+            config,
             device,
+            dvd_logo_speed: Vec2f32::new(1.0, 1.0),
+            dvd_texture_bind_group,
+            image_texture_bind_group,
             initial_draging_position: None,
             old_image_offset: uniforms.image_offset,
             queue,
@@ -189,7 +256,7 @@ impl State<'_> {
             scroll_behaviour: ScrollBehaviour::Zoom,
             surface,
             surface_config,
-            texture_bind_group,
+            time: 0,
             uniforms,
             uniforms_bind_group,
             uniforms_buffer,
@@ -198,9 +265,6 @@ impl State<'_> {
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        let window_size = self.window.inner_size();
-        self.uniforms.canvas_size = (window_size.width as f32, window_size.height as f32).into();
-
         let output = self.surface.get_current_texture()?;
 
         let view = output
@@ -231,7 +295,12 @@ impl State<'_> {
             let mut render_pass = encoder.begin_render_pass(&render_pass_desc);
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.uniforms_bind_group, &[]);
-            render_pass.set_bind_group(1, &self.texture_bind_group, &[]);
+            render_pass.set_bind_group(1, &self.image_texture_bind_group, &[]);
+
+            if self.config.dvd_logo_enabled {
+                render_pass.set_bind_group(2, &self.dvd_texture_bind_group, &[]);
+            }
+
             render_pass.draw(0..6, 0..1);
         }
 
@@ -271,11 +340,22 @@ impl State<'_> {
     pub fn handle_keyboard_input(&mut self, event_loop: &ActiveEventLoop, event: KeyEvent) {
         match (event.logical_key, event.state) {
             (Key::Named(NamedKey::Escape), ElementState::Pressed) => event_loop.exit(),
-            (Key::Character(char), ElementState::Pressed) => {
-                if char.as_str() == "q" {
-                    event_loop.exit();
+            (Key::Character(char), ElementState::Pressed) => match char.as_str() {
+                "q" => event_loop.exit(),
+                "d" if self.config.dvd_logo_enabled => {
+                    self.toggle_dvd_logo_visibility();
                 }
-            }
+                ">" if self.config.dvd_logo_enabled => {
+                    self.dvd_logo_speed *= 1.2;
+                }
+                "<" if self.config.dvd_logo_enabled => {
+                    self.dvd_logo_speed *= 0.8;
+                }
+                "=" if self.config.dvd_logo_enabled => {
+                    self.dvd_logo_speed = Vec2f32::new(1.0, 1.0);
+                }
+                _ => {}
+            },
             _ => {}
         }
     }
@@ -333,6 +413,11 @@ impl State<'_> {
     }
 
     pub fn handle_redraw_requested(&mut self) {
+        if self.uniforms.dvd_logo_visible != 0 {
+            self.update_dvd_logo_state();
+            self.time = self.time.wrapping_add(1);
+        }
+
         match self.render() {
             Ok(_) => {}
             Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
@@ -341,6 +426,8 @@ impl State<'_> {
             }
             Err(err) => log::error!("Render error: {err}"),
         }
+
+        self.window.request_redraw();
     }
 
     pub fn handle_cursor_moved(&mut self, position: PhysicalPosition<f64>) {
@@ -352,10 +439,6 @@ impl State<'_> {
         }
 
         self.write_uniforms();
-    }
-
-    pub fn request_window_redraw(&self) {
-        self.window.request_redraw();
     }
 
     fn handle_zoom_changed(&mut self, delta: MouseScrollDelta) {
@@ -410,12 +493,7 @@ impl State<'_> {
         const PIXEL_DELTA_SCROLL_COEFFICIENT: f32 = 10.0;
 
         match delta {
-            MouseScrollDelta::LineDelta(_, y) => match y {
-                ..0.0 => -0.1,
-                0.0 => 0.0,
-                0.0.. => 0.1,
-                _ => 0.0,
-            },
+            MouseScrollDelta::LineDelta(_, y) => y.clamp(-0.1, 0.1),
             MouseScrollDelta::PixelDelta(PhysicalPosition { y, .. }) => {
                 (y as f32) / self.uniforms.canvas_size.y * PIXEL_DELTA_SCROLL_COEFFICIENT
             }
@@ -431,6 +509,7 @@ impl State<'_> {
                     1.1
                 }
             }
+
             MouseScrollDelta::PixelDelta(PhysicalPosition { y, .. }) => {
                 if y < 0.0 {
                     0.98
@@ -439,6 +518,47 @@ impl State<'_> {
                 }
             }
         }
+    }
+
+    fn update_dvd_logo_state(&mut self) {
+        self.update_dvd_logo_position();
+        self.update_dvd_logo_color();
+        self.write_uniforms();
+    }
+
+    fn update_dvd_logo_position(&mut self) {
+        let image_size = self.uniforms.image_size;
+        let dvd_logo_size = self.uniforms.dvd_logo_size;
+
+        let dvd_logo_position = &mut self.uniforms.dvd_logo_position;
+        *dvd_logo_position += self.dvd_logo_speed;
+
+        if dvd_logo_position.x < 0.0 || dvd_logo_position.x + dvd_logo_size.x > image_size.x {
+            let x_pos = &mut dvd_logo_position.x;
+            *x_pos = x_pos.clamp(1.0, image_size.x - dvd_logo_size.x - 1.0);
+            self.dvd_logo_speed.x = -self.dvd_logo_speed.x;
+        }
+
+        if dvd_logo_position.y < 0.0 || dvd_logo_position.y + dvd_logo_size.y > image_size.y {
+            let y_pos = &mut dvd_logo_position.y;
+            *y_pos = y_pos.clamp(1.0, image_size.y - dvd_logo_size.y - 1.0);
+            self.dvd_logo_speed.y = -self.dvd_logo_speed.y;
+        }
+    }
+
+    fn update_dvd_logo_color(&mut self) {
+        let wheel_pos = self.time % 256;
+        self.uniforms.dvd_logo_color = color_wheel(wheel_pos);
+    }
+
+    fn toggle_dvd_logo_visibility(&mut self) {
+        if self.uniforms.dvd_logo_visible == 0 {
+            self.uniforms.dvd_logo_visible = 1;
+        } else {
+            self.uniforms.dvd_logo_visible = 0;
+        };
+
+        self.write_uniforms();
     }
 }
 
@@ -468,5 +588,32 @@ fn select_alpha_mode_prefer_transparency(
         _ if alpha_modes.contains(&PreMultiplied) => PreMultiplied,
         _ if alpha_modes.contains(&PostMultiplied) => PostMultiplied,
         _ => Auto,
+    }
+}
+
+fn color_wheel(mut pos: u32) -> [f32; 4] {
+    if pos < 85 {
+        [
+            (255 - pos * 3) as f32 / 255.0,
+            0.0,
+            (pos * 3) as f32 / 255.0,
+            0.5,
+        ]
+    } else if pos < 170 {
+        pos -= 85;
+        [
+            0.0,
+            (pos * 3) as f32 / 255.0,
+            (255 - pos * 3) as f32 / 255.0,
+            0.5,
+        ]
+    } else {
+        pos -= 170;
+        [
+            (pos * 3) as f32 / 255.0,
+            (255 - pos * 3) as f32 / 255.0,
+            0.0,
+            0.5,
+        ]
     }
 }

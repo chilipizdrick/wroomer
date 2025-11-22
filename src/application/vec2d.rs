@@ -1,7 +1,7 @@
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 
 #[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, bytemuck::NoUninit)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Vec2f32 {
     pub x: f32,
     pub y: f32,
