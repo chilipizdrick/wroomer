@@ -264,6 +264,10 @@ impl State<'_> {
         }
     }
 
+    pub fn request_window_redraw(&self) {
+        self.window.request_redraw();
+    }
+
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture()?;
 
@@ -426,8 +430,6 @@ impl State<'_> {
             }
             Err(err) => log::error!("Render error: {err}"),
         }
-
-        self.window.request_redraw();
     }
 
     pub fn handle_cursor_moved(&mut self, position: PhysicalPosition<f64>) {

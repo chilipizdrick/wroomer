@@ -19,6 +19,7 @@ mod platform_specific {
         }
 
         if screenshots.len() == 1 {
+            log::debug!("Captured only one screenshot, returning screenshot without compositing");
             let screenshot = screenshots.into_iter().next().unwrap();
             return Ok(screenshot.into());
         }

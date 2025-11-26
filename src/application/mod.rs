@@ -51,7 +51,20 @@ impl ApplicationHandler for App {
         _window_id: WindowId,
         event: WindowEvent,
     ) {
+        use WindowEvent as WE;
         if let Some(state) = &mut self.state {
+            let should_request_redraw = self.config.dvd_logo_enabled
+                || matches!(
+                    event,
+                    WE::Resized(_)
+                        | WE::ScaleFactorChanged { .. }
+                        | WE::KeyboardInput { .. }
+                        | WE::ModifiersChanged(_)
+                        | WE::MouseInput { .. }
+                        | WE::MouseWheel { .. }
+                        | WE::CursorMoved { .. }
+                );
+
             match event {
                 WindowEvent::CloseRequested | WindowEvent::Destroyed => event_loop.exit(),
                 WindowEvent::Resized(size) => state.handle_resize_event(size),
@@ -74,6 +87,10 @@ impl ApplicationHandler for App {
                 WindowEvent::CursorMoved { position, .. } => state.handle_cursor_moved(position),
                 WindowEvent::RedrawRequested => state.handle_redraw_requested(),
                 _ => {}
+            }
+
+            if should_request_redraw {
+                state.request_window_redraw();
             }
         }
     }

@@ -20,13 +20,14 @@ rustPlatform.buildRustPackage rec {
   cargoLock = {
     lockFile = ./Cargo.lock;
     outputHashes = {
-      "libwayshot-0.3.2-dev" = "sha256-frCOq0iX8F5MP1UteeNSogtIqjG2lb8b+USd48MkPnA=";
+      "libwayshot-0.3.2-dev" = "sha256-yPO39u+EUW18PclkZjkxWZr4Q7nilew4oC3rP+Do2D4=";
     };
   };
 
   src = lib.cleanSource ./.;
 
   cargoBuildFlags = lib.optionals waylandSupport [
+    "--no-default-features"
     "--features"
     "wayland"
   ];

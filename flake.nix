@@ -18,21 +18,15 @@
 
         devShells.default = pkgs.mkShell rec {
           buildInputs = with pkgs; [
-            cargo-xwin
-            cargo-flamegraph
-            perf
-            binutils
-
-            pkg-config
-            wayland
-            vulkan-loader
-            libxkbcommon
-            libgbm
             libGL
-
-            pipewire
             libclang
+            libgbm
             libxcb
+            libxkbcommon
+            pipewire
+            pkg-config
+            vulkan-loader
+            wayland
           ];
 
           shellHook = let

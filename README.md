@@ -20,3 +20,12 @@ If you find this repository useful or inspiring, good for you, I guess.
 ## Planned features
 
 If I have time and motivation, I will implement smooth scrolling and zooming and ~make application cross-platform~ it should be cross-platform.
+
+# TODOs
+
+- [ ] Use `glam` crate instead of homegrown `Vec2f32` type.
+- [ ] Rewrite unhinged shader code to be 2 shaders + 2 draw calls.
+- [ ] Remove dvd logo code or make it more clean.
+- [ ] Implement image rotation.
+- [ ] Add github actions for automatic releases.
+- [ ] Add test coverage for critical parts of code.
