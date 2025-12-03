@@ -1,15 +1,18 @@
-# wroomer - a simple zoomer application ~for wayland~ (now works everywhere)
+# wroomer - a simple zoomer application
 
 This application is obviously inspired by [boomer](https://github.com/tsoding/boomer) by [tsoding](https://github.com/tsoding) and [woomer](https://github.com/coffeeispower/woomer) by [Tiago Dinis](https://github.com/coffeeispower) (which actually works on wayland).
 
 ## Controls
 
 - Hold <kbd>Ctrl</kbd> - Turn spotlight on
-- Right mouse button, <kbd>Esc</kbd> or <kbd>Q</kbd> - Quit application
+- Right mouse button or <kbd>Esc</kbd> - Quit application
 - Left mouse button - Drag to move image
 - Scroll wheel - Zoom image in/out
 - <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + Scroll wheel - Adjust spotlight radius
-- <kbd>D</kbd> - Spawn a DVD logo (only works with `--dvd-logo` cli flag)
+- <kbd>Alt</kbd> + Scroll wheel - Rotate image continuously
+- <kbd>E</kbd> - Rotate image 90 degrees clockwise
+- <kbd>Q</kbd> - Rotate image 90 degrees counterclockwise
+- <kbd>R</kbd> - Reset image position
 
 ## Why?
 
@@ -17,15 +20,14 @@ Why did I even write my version then? Well, fractional scaling on hyprland cause
 
 If you find this repository useful or inspiring, good for you, I guess.
 
-## Planned features
+## Known bugs
+- Application can only open images at most 8192 pixels in width OR height (seems to a WebGPU limitation..?)
 
-If I have time and motivation, I will implement smooth scrolling and zooming and ~make application cross-platform~ it should be cross-platform.
+## TODOs
 
-# TODOs
-
-- [ ] Use `glam` crate instead of homegrown `Vec2f32` type.
-- [ ] Rewrite unhinged shader code to be 2 shaders + 2 draw calls.
-- [ ] Remove dvd logo code or make it more clean.
-- [ ] Implement image rotation.
+- [x] Use `glam` crate instead of homegrown `Vec2f32` type.
+- [x] Rewrite unhinged shader code to be 2 shaders + 2 draw calls.
+- [x] Remove dvd logo code or make it more clean.
+- [x] Implement image rotation (also in fixed steps).
 - [ ] Add github actions for automatic releases.
-- [ ] Add test coverage for critical parts of code.
+- [ ] Implement rendering high pixel count images (more than 8192 in any dimension).

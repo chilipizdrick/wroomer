@@ -5,9 +5,7 @@ mod platform_specific {
     use image::{DynamicImage, GenericImage};
     use xcap::{Monitor, XCapResult};
 
-    pub type ScreenshotResult = Result<DynamicImage, anyhow::Error>;
-
-    pub fn get_screenshot_of_all_screens() -> ScreenshotResult {
+    pub fn get_screenshot_of_all_screens() -> anyhow::Result<DynamicImage> {
         let monitors = Monitor::all()?;
         let screenshots = monitors
             .iter()
@@ -45,9 +43,7 @@ mod platform_specific {
 mod platform_specific {
     use image::DynamicImage;
 
-    pub type ScreenshotResult = Result<DynamicImage, libwayshot::Error>;
-
-    pub fn get_screenshot_of_all_screens() -> ScreenshotResult {
+    pub fn get_screenshot_of_all_screens() -> anyhow::Result<DynamicImage> {
         let connection = libwayshot::WayshotConnection::new()?;
         let screenshot = connection.screenshot_all(false)?;
         Ok(screenshot)

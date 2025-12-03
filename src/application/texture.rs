@@ -1,4 +1,4 @@
-use image::GenericImageView;
+use image::RgbaImage;
 
 #[derive(Debug)]
 pub struct DiffuseImageTexture {
@@ -9,21 +9,24 @@ pub struct DiffuseImageTexture {
 }
 
 impl DiffuseImageTexture {
+    #[must_use]
     pub fn from_image(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        img: &image::DynamicImage,
+        image: &RgbaImage,
         label: Option<&str>,
     ) -> Self {
-        // TODO: Remove cloning here
-        let rgba = img.to_rgba8();
-        let dimensions = img.dimensions();
+        // TODO: Implement rendering bigger textures, 8192 is the limit right now
+
+        let width = image.width();
+        let height = image.height();
 
         let size = wgpu::Extent3d {
-            width: dimensions.0,
-            height: dimensions.1,
+            width,
+            height,
             depth_or_array_layers: 1,
         };
+
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label,
             size,
@@ -42,16 +45,17 @@ impl DiffuseImageTexture {
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
             },
-            &rgba,
+            image,
             wgpu::TexelCopyBufferLayout {
                 offset: 0,
-                bytes_per_row: Some(4 * dimensions.0),
-                rows_per_image: Some(dimensions.1),
+                bytes_per_row: Some(4 * width),
+                rows_per_image: Some(height),
             },
             size,
         );
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
@@ -66,6 +70,42 @@ impl DiffuseImageTexture {
             _texture: texture,
             view,
             sampler,
+        }
+    }
+
+    pub fn texture_bind_group_layout_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
+        wgpu::BindGroupLayoutEntry {
+            binding,
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Texture {
+                multisampled: false,
+                view_dimension: wgpu::TextureViewDimension::D2,
+                sample_type: wgpu::TextureSampleType::Float { filterable: true },
+            },
+            count: None,
+        }
+    }
+
+    pub fn sampler_bind_group_layout_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
+        wgpu::BindGroupLayoutEntry {
+            binding,
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+            count: None,
+        }
+    }
+
+    pub fn texture_view_bind_group_entry(&self, binding: u32) -> wgpu::BindGroupEntry<'_> {
+        wgpu::BindGroupEntry {
+            binding,
+            resource: wgpu::BindingResource::TextureView(&self.view),
+        }
+    }
+
+    pub fn sampler_bind_group_entry(&self, binding: u32) -> wgpu::BindGroupEntry<'_> {
+        wgpu::BindGroupEntry {
+            binding,
+            resource: wgpu::BindingResource::Sampler(&self.sampler),
         }
     }
 }

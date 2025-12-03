@@ -4,6 +4,10 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    nix-github-actions = {
+      url = "github:nix-community/nix-github-actions";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs:
@@ -18,6 +22,8 @@
 
         devShells.default = pkgs.mkShell rec {
           buildInputs = with pkgs; [
+            cargo-xwin
+
             libGL
             libclang
             libgbm
@@ -45,7 +51,11 @@
           LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath buildInputs}";
         };
       };
+
+      flake = {
+        githubActions = inputs.nix-github-actions.lib.mkGithubMatrix {checks = inputs.self.packages;};
+      };
+
       imports = [];
-      flake = {};
     };
 }
