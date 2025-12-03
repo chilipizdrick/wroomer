@@ -20,14 +20,11 @@ Why did I even write my version then? Well, fractional scaling on hyprland cause
 
 If you find this repository useful or inspiring, good for you, I guess.
 
-## Known bugs
-- Application can only open images at most 8192 pixels in width OR height (seems to a WebGPU limitation..?)
-
 ## TODOs
 
 - [x] Use `glam` crate instead of homegrown `Vec2f32` type.
 - [x] Rewrite unhinged shader code to be 2 shaders + 2 draw calls.
 - [x] Remove dvd logo code or make it more clean.
 - [x] Implement image rotation (also in fixed steps).
-- [ ] Add github actions for automatic releases.
-- [ ] Implement rendering high pixel count images (more than 8192 in any dimension).
+- [x] Add github actions for automatic releases.
+- [ ] Implement rendering high pixel count images (via multiple quads and textures).
