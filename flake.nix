@@ -14,10 +14,9 @@
     inputs.flake-parts.lib.mkFlake {inherit inputs;} {
       systems = ["x86_64-linux"];
       perSystem = {pkgs, ...}: {
-        packages = rec {
+        packages = {
           wroomer = pkgs.callPackage ./package.nix {};
           wroomer-wayland = pkgs.callPackage ./package.nix {waylandSupport = true;};
-          default = wroomer;
         };
 
         devShells.default = pkgs.mkShell rec {
