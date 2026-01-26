@@ -52,8 +52,6 @@ pub struct State<'a> {
     scroll_behaviour: ScrollBehaviour,
 
     #[cfg(feature = "wayland")]
-    initial_window_size: Vec2,
-    #[cfg(feature = "wayland")]
     initial_image_offset_recalculated: bool,
 }
 
@@ -150,8 +148,6 @@ impl State<'_> {
             spotlight_darkness,
             scroll_behaviour: ScrollBehaviour::default(),
 
-            #[cfg(feature = "wayland")]
-            initial_window_size: window_size,
             #[cfg(feature = "wayland")]
             initial_image_offset_recalculated: false,
         }
@@ -351,7 +347,7 @@ impl State<'_> {
     // A workaround on wayland to center image after actual window size has been confirmed
     #[cfg(feature = "wayland")]
     fn check_and_recalculate_initial_image_position(&mut self) {
-        if !self.initial_image_offset_recalculated && self.initial_window_size != self.window_size {
+        if !self.initial_image_offset_recalculated {
             self.reset_image_position();
             self.initial_image_offset_recalculated = true;
         }
