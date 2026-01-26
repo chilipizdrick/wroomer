@@ -20,6 +20,19 @@ Why did I even write my version then? Well, fractional scaling on hyprland cause
 
 If you find this repository useful or inspiring, good for you, I guess.
 
+## For nix users
+
+The flake exposes 2 packages: `wroomer` and `wroomer-wayland` (which is actually an alias to `wroomer.override {waylandSupport = true;}`).
+
+There is also a binary cache available:
+
+```nix
+nix.settings = {
+  substituters = ["https://chilipizdrick.cachix.org"];
+  trusted-public-keys = ["chilipizdrick.cachix.org-1:xVL2Q4Rbpc6EpDJ8lNHg7BMRhPfT26jw7l+jk4taUI8="];
+};
+```
+
 ## TODOs
 
 - [x] Use `glam` crate instead of homegrown `Vec2f32` type.

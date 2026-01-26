@@ -21,8 +21,6 @@
 
         devShells.default = pkgs.mkShell rec {
           buildInputs = with pkgs; [
-            cargo-xwin
-
             libGL
             libclang
             libgbm

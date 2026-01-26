@@ -47,13 +47,14 @@ fn load_image(args: &Args) -> anyhow::Result<DynamicImage> {
 }
 
 fn create_window_event_loop() -> Result<EventLoop<()>, EventLoopError> {
-    use winit::platform::wayland::EventLoopBuilderExtWayland;
+    #[cfg(feature = "wayland")]
+    {
+        use winit::platform::wayland::EventLoopBuilderExtWayland;
+        EventLoop::builder().with_wayland().build()
+    }
 
-    let event_loop = if cfg!(feature = "wayland") {
-        EventLoop::builder().with_wayland().build()?
-    } else {
-        EventLoop::new()?
-    };
-
-    Ok(event_loop)
+    #[cfg(not(feature = "wayland"))]
+    {
+        EventLoop::new()
+    }
 }
