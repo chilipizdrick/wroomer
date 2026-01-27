@@ -1,6 +1,8 @@
 # wroomer - a simple zoomer application
 
-[![demo](https://raw.githubusercontent.com/chilipizdrick/wroomer/master/assets/thumbnail.jpg)](https://raw.githubusercontent.com/chilipizdrick/wroomer/master/assets/demo.mp4)
+<p align="center" width="100%">
+  <video src="https://github.com/user-attachments/assets/55295f96-606e-4ad3-8b87-23da38a882f6" width="90%" controls></video>
+</p>
 
 This application is obviously inspired by [boomer](https://github.com/tsoding/boomer) by [tsoding](https://github.com/tsoding) and [woomer](https://github.com/coffeeispower/woomer) by [Tiago Dinis](https://github.com/coffeeispower) (which actually works on wayland).
 
