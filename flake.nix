@@ -52,7 +52,5 @@
       flake = {
         githubActions = inputs.nix-github-actions.lib.mkGithubMatrix {checks = inputs.self.packages;};
       };
-
-      imports = [];
     };
 }

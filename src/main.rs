@@ -9,8 +9,11 @@ mod cli_args;
 mod config;
 mod screenshot;
 
+use std::io::{Cursor, Read, stdin};
+
+use anyhow::anyhow;
 use clap::Parser;
-use image::DynamicImage;
+use image::{DynamicImage, ImageReader};
 use tracing_subscriber::{EnvFilter, filter::LevelFilter};
 use winit::{error::EventLoopError, event_loop::EventLoop};
 
@@ -38,10 +41,19 @@ fn main() -> anyhow::Result<()> {
 
 fn load_image(args: &Args) -> anyhow::Result<DynamicImage> {
     match &args.image_path {
-        Some(path) => image::open(path).map_err(Into::into),
+        Some(path) => match path.as_str() {
+            "-" => {
+                let mut bytes = Vec::<u8>::new();
+                stdin().lock().read_to_end(&mut bytes)?;
+                let cursor = Cursor::new(bytes);
+                let reader = ImageReader::new(cursor).with_guessed_format()?;
+                reader.decode().map_err(Into::into)
+            }
+            path => image::open(path).map_err(Into::into),
+        },
         None if args.capture_screenshot => get_screenshot_of_all_screens(),
-        _ => Err(anyhow::Error::msg(
-            "Provide image path or use --capture-screenshot flag.",
+        _ => Err(anyhow!(
+            "Provide image path or use --capture-screenshot flag."
         )),
     }
 }
