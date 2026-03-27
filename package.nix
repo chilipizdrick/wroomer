@@ -17,12 +17,7 @@ rustPlatform.buildRustPackage rec {
   pname = "wroomer";
   name = pname;
   version = "0.1.0";
-  cargoLock = {
-    lockFile = ./Cargo.lock;
-    outputHashes = {
-      "libwayshot-0.3.2-dev" = "sha256-yPO39u+EUW18PclkZjkxWZr4Q7nilew4oC3rP+Do2D4=";
-    };
-  };
+  cargoLock.lockFile = ./Cargo.lock;
 
   src = lib.cleanSource ./.;
 
