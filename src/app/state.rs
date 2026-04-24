@@ -9,14 +9,16 @@ use image::RgbaImage;
 use pollster::block_on;
 use winit::{
     dpi::{PhysicalPosition, PhysicalSize},
-    event::{ElementState, KeyEvent, Modifiers, MouseButton, MouseScrollDelta, WindowEvent},
+    event::{
+        DeviceEvent, ElementState, KeyEvent, Modifiers, MouseButton, MouseScrollDelta, WindowEvent,
+    },
     event_loop::ActiveEventLoop,
     keyboard::{KeyCode, PhysicalKey},
     window::Window,
 };
 
 use crate::{
-    application::{
+    app::{
         image_render_pipeline::{ImageRenderPipelineData, ImageUniforms},
         spotlight_render_pipeline::{SpotlightRenderPipelineData, SpotlightUniforms},
     },
@@ -27,10 +29,8 @@ use crate::{
 pub struct State<'a> {
     app_config: AppConfig,
     window: Arc<Window>,
-
     surface: wgpu::Surface<'a>,
     surface_config: wgpu::SurfaceConfiguration,
-
     device: wgpu::Device,
     queue: wgpu::Queue,
 
@@ -51,40 +51,36 @@ pub struct State<'a> {
     spotlight_darkness: f32,
     scroll_behaviour: ScrollBehaviour,
 
-    #[cfg(feature = "wayland")]
-    initial_image_offset_recalculated: bool,
+    mouse_movement_detected: bool,
 }
 
 impl State<'_> {
-    pub fn new(app_config: AppConfig, window: Window, image: &RgbaImage) -> Self {
-        let rendering_backends =
-            wgpu::Backends::VULKAN | wgpu::Backends::DX12 | wgpu::Backends::METAL;
+    pub fn initialize(
+        app_config: AppConfig,
+        window: Window,
+        image: &RgbaImage,
+    ) -> anyhow::Result<Self> {
+        let backends = wgpu::Backends::VULKAN | wgpu::Backends::DX12 | wgpu::Backends::METAL;
 
-        let physical_window_size = window.inner_size();
+        let window_size = window.inner_size();
         let window = Arc::new(window);
 
-        let wgpu_instance = wgpu_instance_with_backends(rendering_backends);
+        let wgpu_instance = wgpu_instance_with_backends(backends);
 
-        let surface = wgpu_instance
-            .create_surface(Arc::clone(&window))
-            .expect("Could not create surface for a window.");
+        let surface = wgpu_instance.create_surface(Arc::clone(&window))?;
 
-        let adapter = find_adapter_matching_backends_supporting_surface(
-            wgpu_instance,
-            rendering_backends,
-            &surface,
-        )
-        .expect("Could not find any graphics adapter supporting Vulkan, DX12 or Metal backend.");
+        let adapter_options = wgpu::RequestAdapterOptions {
+            compatible_surface: Some(&surface),
+            ..Default::default()
+        };
+        let adapter = block_on(wgpu_instance.request_adapter(&adapter_options))?;
 
         let surface_capabilities = surface.get_capabilities(&adapter);
-        let surface_config = surface_configuration(&surface_capabilities, physical_window_size);
+        let surface_config = surface_configuration(&surface_capabilities, window_size);
 
-        let (device, queue) = request_device(&adapter);
+        let (device, queue) = request_device(&adapter)?;
 
-        let window_size = Vec2::new(
-            physical_window_size.width as f32,
-            physical_window_size.height as f32,
-        );
+        let window_size = Vec2::new(window_size.width as f32, window_size.height as f32);
 
         let image_size = Vec2::new(image.width() as f32, image.height() as f32);
 
@@ -108,7 +104,7 @@ impl State<'_> {
 
         let spotlight_center = Vec2::ZERO;
         let spotlight_radius = 0.1;
-        let spotlight_darkness = 0.9;
+        let spotlight_darkness = 0.95;
         let aspect_ratio = window_size.x / window_size.y;
 
         let spotlight_uniforms = SpotlightUniforms::new(
@@ -121,7 +117,7 @@ impl State<'_> {
         let spotlight_data =
             SpotlightRenderPipelineData::new(&device, &surface_config, spotlight_uniforms);
 
-        Self {
+        Ok(Self {
             app_config,
             window,
 
@@ -148,17 +144,18 @@ impl State<'_> {
             spotlight_darkness,
             scroll_behaviour: ScrollBehaviour::default(),
 
-            #[cfg(feature = "wayland")]
-            initial_image_offset_recalculated: false,
-        }
+            mouse_movement_detected: false,
+        })
     }
 
     pub fn handle_window_event(&mut self, event_loop: &ActiveEventLoop, event: WindowEvent) {
+        log::debug!("Window event: {event:?}");
+
         let should_request_redraw = should_request_redraw(&event);
 
         match event {
             WindowEvent::CloseRequested | WindowEvent::Destroyed => event_loop.exit(),
-            WindowEvent::Resized(size) => self.resize(size),
+            WindowEvent::Resized(size) => self.handle_resized(size),
             WindowEvent::KeyboardInput { event, .. } => {
                 self.handle_keyboard_input(event_loop, event)
             }
@@ -174,6 +171,12 @@ impl State<'_> {
 
         if should_request_redraw {
             self.window.request_redraw();
+        }
+    }
+
+    pub fn handle_device_event(&mut self, _event_loop: &ActiveEventLoop, event: DeviceEvent) {
+        if let DeviceEvent::MouseMotion { .. } = event {
+            self.mouse_movement_detected = true;
         }
     }
 
@@ -257,7 +260,14 @@ impl State<'_> {
     }
 
     fn handle_cursor_moved(&mut self, position: PhysicalPosition<f64>) {
-        self.cursor_position = Vec2::new(position.x as f32, position.y as f32);
+        // Fix for the invalid mouse position before the first mouse movement event
+        let cursor_position = if self.mouse_movement_detected {
+            Vec2::new(position.x as f32, position.y as f32)
+        } else {
+            self.window_size / 2.0
+        };
+
+        self.cursor_position = cursor_position;
 
         if let Some(initial_draging_position) = self.initial_draging_position {
             self.image_offset =
@@ -292,7 +302,7 @@ impl State<'_> {
             Ok(_) => {}
             Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
                 let window_size = self.window.inner_size();
-                self.resize(window_size);
+                self.handle_resized(window_size);
             }
             Err(err) => log::error!("Render error: {err}"),
         }
@@ -307,12 +317,26 @@ impl State<'_> {
         let mut encoder = self.create_command_encoder();
 
         {
-            let mut render_pass = begin_render_pass(&mut encoder, &view);
+            let render_pass_desc = wgpu::RenderPassDescriptor {
+                label: Some("Image + Spotlight Draw Render Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    depth_slice: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                ..Default::default()
+            };
 
-            self.draw_image(&mut render_pass);
+            let mut rpass = encoder.begin_render_pass(&render_pass_desc);
+
+            self.draw_image(&mut rpass);
 
             if self.spotlight_on {
-                self.draw_spotlight(&mut render_pass);
+                self.draw_spotlight(&mut rpass);
             }
         }
 
@@ -323,7 +347,7 @@ impl State<'_> {
         Ok(())
     }
 
-    fn resize(&mut self, window_size: PhysicalSize<u32>) {
+    fn handle_resized(&mut self, window_size: PhysicalSize<u32>) {
         let PhysicalSize { width, height } = window_size;
 
         assert!(
@@ -338,18 +362,6 @@ impl State<'_> {
 
         if self.app_config.center_image_on_resize {
             self.reset_image_position();
-        }
-
-        #[cfg(feature = "wayland")]
-        self.check_and_recalculate_initial_image_position();
-    }
-
-    // A workaround on wayland to center image after actual window size has been confirmed
-    #[cfg(feature = "wayland")]
-    fn check_and_recalculate_initial_image_position(&mut self) {
-        if !self.initial_image_offset_recalculated {
-            self.reset_image_position();
-            self.initial_image_offset_recalculated = true;
         }
     }
 
@@ -448,21 +460,9 @@ fn wgpu_instance_with_backends(backends: wgpu::Backends) -> wgpu::Instance {
     wgpu::Instance::new(&wgpu_instance_desc)
 }
 
-fn find_adapter_matching_backends_supporting_surface(
-    wgpu_instance: wgpu::Instance,
-    backends: wgpu::Backends,
-    surface: &wgpu::Surface,
-) -> Option<wgpu::Adapter> {
-    wgpu_instance
-        .enumerate_adapters(backends)
-        .into_iter()
-        .find(|a| a.is_surface_supported(surface))
-}
-
-fn request_device(adapter: &wgpu::Adapter) -> (wgpu::Device, wgpu::Queue) {
+fn request_device(adapter: &wgpu::Adapter) -> anyhow::Result<(wgpu::Device, wgpu::Queue)> {
     let device_desc = wgpu::DeviceDescriptor::default();
-    block_on(adapter.request_device(&device_desc))
-        .expect("Could not open connection to a graphics device.")
+    block_on(adapter.request_device(&device_desc)).map_err(Into::into)
 }
 
 fn surface_configuration(
@@ -488,27 +488,6 @@ fn surface_configuration(
         alpha_mode,
         view_formats: vec![],
     }
-}
-
-fn begin_render_pass<'a>(
-    encoder: &'a mut wgpu::CommandEncoder,
-    view: &wgpu::TextureView,
-) -> wgpu::RenderPass<'a> {
-    let render_pass_desc = wgpu::RenderPassDescriptor {
-        label: Some("Image + Spotlight Draw Render Pass"),
-        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-            view,
-            resolve_target: None,
-            depth_slice: None,
-            ops: wgpu::Operations {
-                load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                store: wgpu::StoreOp::Store,
-            },
-        })],
-        ..Default::default()
-    };
-
-    encoder.begin_render_pass(&render_pass_desc)
 }
 
 fn should_request_redraw(event: &WindowEvent) -> bool {

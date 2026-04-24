@@ -4,7 +4,7 @@
 #[cfg(all(feature = "default", feature = "wayland"))]
 compile_error!("Complile with either default feature, or wayland.");
 
-mod application;
+mod app;
 mod cli_args;
 mod config;
 mod screenshot;
@@ -18,25 +18,21 @@ use tracing_subscriber::{EnvFilter, filter::LevelFilter};
 use winit::{error::EventLoopError, event_loop::EventLoop};
 
 use crate::{
-    application::App, cli_args::Args, config::AppConfig, screenshot::get_screenshot_of_all_screens,
+    app::App, cli_args::Args, config::AppConfig, screenshot::get_screenshot_of_all_screens,
 };
 
 fn main() -> anyhow::Result<()> {
+    init_tracing();
+
     let args = Args::parse();
-
-    let env_filter = EnvFilter::builder()
-        .with_default_directive(LevelFilter::WARN.into())
-        .with_env_var("RUST_LOG")
-        .from_env_lossy();
-    tracing_subscriber::fmt().with_env_filter(env_filter).init();
-
     let image = load_image(&args)?;
-
     let config = AppConfig::from(args);
 
     let window_event_loop = create_window_event_loop()?;
     let mut app = App::new(config, image);
-    window_event_loop.run_app(&mut app).map_err(Into::into)
+    window_event_loop.run_app(&mut app)?;
+
+    Ok(())
 }
 
 fn load_image(args: &Args) -> anyhow::Result<DynamicImage> {
@@ -59,14 +55,18 @@ fn load_image(args: &Args) -> anyhow::Result<DynamicImage> {
 }
 
 fn create_window_event_loop() -> Result<EventLoop<()>, EventLoopError> {
-    #[cfg(feature = "wayland")]
-    {
+    if cfg!(feature = "wayland") {
         use winit::platform::wayland::EventLoopBuilderExtWayland;
         EventLoop::builder().with_wayland().build()
-    }
-
-    #[cfg(not(feature = "wayland"))]
-    {
+    } else {
         EventLoop::new()
     }
+}
+
+fn init_tracing() {
+    let env_filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::WARN.into())
+        .with_env_var("RUST_LOG")
+        .from_env_lossy();
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
 }

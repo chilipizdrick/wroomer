@@ -2,23 +2,26 @@ pub use platform_specific::get_screenshot_of_all_screens;
 
 #[cfg(not(feature = "wayland"))]
 mod platform_specific {
+    use anyhow::anyhow;
     use image::{DynamicImage, GenericImage};
     use xcap::{Monitor, XCapResult};
 
     pub fn get_screenshot_of_all_screens() -> anyhow::Result<DynamicImage> {
         let monitors = Monitor::all()?;
-        let screenshots = monitors
+        let mut screenshots = monitors
             .iter()
             .map(|m| m.capture_image())
             .collect::<XCapResult<Vec<_>>>()?;
 
         if screenshots.is_empty() {
-            return Err(anyhow::Error::msg("No monitors detected"));
+            return Err(anyhow!(
+                "No monitors detected, could not capture any screenshots"
+            ));
         }
 
         if screenshots.len() == 1 {
             log::debug!("Captured only one screenshot, returning screenshot without compositing");
-            let screenshot = screenshots.into_iter().next().unwrap();
+            let screenshot = screenshots.pop().unwrap();
             return Ok(screenshot.into());
         }
 

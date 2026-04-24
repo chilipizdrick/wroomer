@@ -3,7 +3,7 @@ use glam::{Mat3, Vec4};
 use image::RgbaImage;
 use wgpu::util::DeviceExt;
 
-use crate::application::texture::DiffuseImageTexture;
+use crate::app::texture::DiffuseImageTexture;
 
 #[derive(Debug)]
 pub struct ImageRenderPipelineData {

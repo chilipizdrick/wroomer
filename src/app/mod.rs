@@ -11,7 +11,7 @@ use winit::{
     window::{Fullscreen, Window, WindowId},
 };
 
-use crate::{application::state::State, config::AppConfig};
+use crate::{app::state::State, config::AppConfig};
 
 #[derive(Debug, Default)]
 pub struct App {
@@ -54,7 +54,11 @@ impl ApplicationHandler for App {
                 Err(err) => panic!("Could not create window: {err}"),
             };
 
-            self.state = Some(State::new(self.config, window, &self.image));
+            let state = State::initialize(self.config, window, &self.image);
+            match state {
+                Ok(state) => self.state = Some(state),
+                Err(err) => panic!("Could not create state: {err}"),
+            }
         }
     }
 
@@ -66,6 +70,17 @@ impl ApplicationHandler for App {
     ) {
         if let Some(state) = &mut self.state {
             state.handle_window_event(event_loop, event);
+        }
+    }
+
+    fn device_event(
+        &mut self,
+        event_loop: &ActiveEventLoop,
+        _device_id: winit::event::DeviceId,
+        event: winit::event::DeviceEvent,
+    ) {
+        if let Some(state) = &mut self.state {
+            state.handle_device_event(event_loop, event);
         }
     }
 }
