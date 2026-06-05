@@ -11,7 +11,7 @@
   libclang,
   stdenv,
   libxcb,
-  waylandSupport ? false,
+  extraWaylandSupport ? false,
 }:
 rustPlatform.buildRustPackage rec {
   pname = "wroomer";
@@ -21,7 +21,7 @@ rustPlatform.buildRustPackage rec {
 
   src = lib.cleanSource ./.;
 
-  cargoBuildFlags = lib.optionals waylandSupport [
+  cargoBuildFlags = lib.optionals extraWaylandSupport [
     "--no-default-features"
     "--features"
     "wayland"

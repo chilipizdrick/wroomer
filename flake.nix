@@ -16,7 +16,7 @@
       perSystem = {pkgs, ...}: {
         packages = {
           wroomer = pkgs.callPackage ./package.nix {};
-          wroomer-wayland = pkgs.callPackage ./package.nix {waylandSupport = true;};
+          wroomer-wayland = pkgs.callPackage ./package.nix {extraWaylandSupport = true;};
         };
 
         devShells.default = pkgs.mkShell rec {
