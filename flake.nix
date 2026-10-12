@@ -16,24 +16,17 @@
     ...
   }: let
     systems = [
-      "aarch64-darwin"
       "aarch64-linux"
-      "x86_64-darwin"
       "x86_64-linux"
     ];
     lib = nixpkgs.lib;
     forAllSystems = lib.genAttrs systems;
     forAllPkgs = f: forAllSystems (system: let pkgs = nixpkgs.legacyPackages.${system}; in f pkgs);
   in {
-    packages =
-      forAllPkgs (pkgs: {
-        wroomer = pkgs.callPackage ./package.nix {};
-      })
-      // (lib.genAttrs ["x86_64-linux" "aarch64-linux"] (
-        system: let
-          pkgs = nixpkgs.legacyPackages.${system};
-        in {wroomer-wayland = pkgs.callPackage ./package.nix {extraWaylandSupport = true;};}
-      ));
+    packages = forAllPkgs (pkgs: {
+      wroomer = pkgs.callPackage ./package.nix {};
+      wroomer-wayland = pkgs.callPackage ./package.nix {extraWaylandSupport = true;};
+    });
 
     devShells = forAllPkgs (pkgs: {
       default = with pkgs; let
@@ -43,8 +36,8 @@
           libgbm
           libxcb
           libxkbcommon
-          pipewire
           vulkan-loader
+          pipewire
           wayland
         ];
       in
