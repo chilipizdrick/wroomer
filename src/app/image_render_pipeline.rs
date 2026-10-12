@@ -52,8 +52,8 @@ impl ImageRenderPipelineData {
         let bind_group = device.create_bind_group(&bind_group_desc);
         let render_pipeline_layout_desc = wgpu::PipelineLayoutDescriptor {
             label: Some("Image Render Pipeline Layout"),
-            bind_group_layouts: &[&bind_group_layout],
-            push_constant_ranges: &[],
+            bind_group_layouts: &[Some(&bind_group_layout)],
+            immediate_size: 0,
         };
         let render_pipeline_layout = device.create_pipeline_layout(&render_pipeline_layout_desc);
         let shader_module_desc = wgpu::include_wgsl!("../../assets/shaders/image.wgsl");
@@ -86,7 +86,7 @@ impl ImageRenderPipelineData {
             },
             depth_stencil: None,
             multisample: wgpu::MultisampleState::default(),
-            multiview: None,
+            multiview_mask: None,
             cache: None,
         };
         let render_pipeline = device.create_render_pipeline(&render_pipeline_desc);

@@ -54,7 +54,8 @@ impl ApplicationHandler for App {
                 Err(err) => panic!("Could not create window: {err}"),
             };
 
-            let state = State::initialize(self.config, window, &self.image);
+            let display_handle = event_loop.owned_display_handle();
+            let state = State::initialize(self.config, window, display_handle, &self.image);
             match state {
                 Ok(state) => self.state = Some(state),
                 Err(err) => panic!("Could not create state: {err}"),

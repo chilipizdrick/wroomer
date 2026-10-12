@@ -35,7 +35,6 @@ fn vs_main(@builtin(vertex_index) index: u32) -> VertexOutput {
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let radius_sq = uniforms.radius * uniforms.radius;
-    // let inner_radius_sq = uniforms.radius * uniforms.radius * 0.8;
 
     let aspect_ratio_sq = uniforms.aspect_ratio * uniforms.aspect_ratio;
     let x_diff = in.uv.x - uniforms.center_position.x;
@@ -46,6 +45,5 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         return vec4(vec3(0.0), uniforms.darkness);
     } else {
         return vec4(0.0);
-        // return mix(vec4(0.0, 0.0, 0.0, 0.0), vec4(0.0, 0.0, 0.0, uniforms.darkness), smoothstep(inner_radius_sq, radius_sq, dist_sq));
     }
 }

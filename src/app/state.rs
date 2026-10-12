@@ -12,7 +12,7 @@ use winit::{
     event::{
         DeviceEvent, ElementState, KeyEvent, Modifiers, MouseButton, MouseScrollDelta, WindowEvent,
     },
-    event_loop::ActiveEventLoop,
+    event_loop::{ActiveEventLoop, OwnedDisplayHandle},
     keyboard::{KeyCode, PhysicalKey},
     window::Window,
 };
@@ -27,6 +27,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct State<'a> {
+    instance: wgpu::Instance,
     app_config: AppConfig,
     window: Arc<Window>,
     surface: wgpu::Surface<'a>,
@@ -58,6 +59,7 @@ impl State<'_> {
     pub fn initialize(
         app_config: AppConfig,
         window: Window,
+        display_handle: OwnedDisplayHandle,
         image: &RgbaImage,
     ) -> anyhow::Result<Self> {
         let backends = wgpu::Backends::VULKAN | wgpu::Backends::DX12 | wgpu::Backends::METAL;
@@ -65,15 +67,15 @@ impl State<'_> {
         let window_size = window.inner_size();
         let window = Arc::new(window);
 
-        let wgpu_instance = wgpu_instance_with_backends(backends);
+        let instance = wgpu_instance_with_backends(backends, display_handle);
 
-        let surface = wgpu_instance.create_surface(Arc::clone(&window))?;
+        let surface = instance.create_surface(Arc::clone(&window))?;
 
         let adapter_options = wgpu::RequestAdapterOptions {
             compatible_surface: Some(&surface),
             ..Default::default()
         };
-        let adapter = block_on(wgpu_instance.request_adapter(&adapter_options))?;
+        let adapter = block_on(instance.request_adapter(&adapter_options))?;
 
         let surface_capabilities = surface.get_capabilities(&adapter);
         let surface_config = surface_configuration(&surface_capabilities, window_size);
@@ -118,6 +120,7 @@ impl State<'_> {
             SpotlightRenderPipelineData::new(&device, &surface_config, spotlight_uniforms);
 
         Ok(Self {
+            instance,
             app_config,
             window,
 
@@ -295,22 +298,49 @@ impl State<'_> {
     }
 
     fn handle_redraw_requested(&mut self) {
+        use wgpu::CurrentSurfaceTexture as CST;
+
+        let texture = loop {
+            match self.surface.get_current_texture() {
+                CST::Success(texture) => {
+                    break texture;
+                }
+
+                CST::Suboptimal(texture) => {
+                    let window_size = self.window.inner_size();
+                    self.handle_resized(window_size);
+
+                    break texture;
+                }
+
+                CST::Timeout | CST::Occluded => {
+                    return;
+                }
+
+                CST::Outdated => {
+                    let window_size = self.window.inner_size();
+                    self.handle_resized(window_size);
+                }
+                CST::Lost => {
+                    let window = Arc::clone(&self.window);
+                    if let Ok(surface) = self.instance.create_surface(window) {
+                        self.surface = surface;
+                    }
+                }
+
+                // FIXME: Actually implement validation error handling
+                CST::Validation => {
+                    return;
+                }
+            }
+        };
+
         self.update_uniforms();
         self.write_uniforms();
-
-        match self.render() {
-            Ok(_) => {}
-            Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
-                let window_size = self.window.inner_size();
-                self.handle_resized(window_size);
-            }
-            Err(err) => log::error!("Render error: {err}"),
-        }
+        self.render(texture);
     }
 
-    fn render(&self) -> Result<(), wgpu::SurfaceError> {
-        let output = self.surface.get_current_texture()?;
-
+    fn render(&self, output: wgpu::SurfaceTexture) {
         let texture_view_desc = wgpu::TextureViewDescriptor::default();
         let view = output.texture.create_view(&texture_view_desc);
 
@@ -342,9 +372,7 @@ impl State<'_> {
 
         self.queue.submit([encoder.finish()]);
         self.window.pre_present_notify();
-        output.present();
-
-        Ok(())
+        self.queue.present(output);
     }
 
     fn handle_resized(&mut self, window_size: PhysicalSize<u32>) {
@@ -452,12 +480,20 @@ enum ScrollBehaviour {
     ChangeSpotlightRadius,
 }
 
-fn wgpu_instance_with_backends(backends: wgpu::Backends) -> wgpu::Instance {
+fn wgpu_instance_with_backends(
+    backends: wgpu::Backends,
+    display_handle: OwnedDisplayHandle,
+) -> wgpu::Instance {
+    let flags = wgpu::InstanceFlags::VALIDATION | wgpu::InstanceFlags::GPU_BASED_VALIDATION;
     let wgpu_instance_desc = wgpu::InstanceDescriptor {
         backends,
-        ..Default::default()
+        flags,
+        memory_budget_thresholds: Default::default(),
+        backend_options: Default::default(),
+        display: Some(Box::new(display_handle)),
     };
-    wgpu::Instance::new(&wgpu_instance_desc)
+
+    wgpu::Instance::new(wgpu_instance_desc)
 }
 
 fn request_device(adapter: &wgpu::Adapter) -> anyhow::Result<(wgpu::Device, wgpu::Queue)> {
@@ -481,6 +517,7 @@ fn surface_configuration(
     wgpu::SurfaceConfiguration {
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         format: texture_format,
+        color_space: Default::default(),
         height: window_size.height,
         width: window_size.width,
         present_mode: wgpu::PresentMode::AutoVsync,
